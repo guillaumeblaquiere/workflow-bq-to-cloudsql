@@ -1,0 +1,113 @@
+main:
+  steps:
+    - assignStep:
+        assign:
+          - bucket: "gib-multiregion-us"
+          - projectid: "gdglyon-cloudrun"
+          - prefix: "workflow-import/export"
+          - query: "SELECT id, email FROM `gdglyon-cloudrun.copy_dataset.name_test`"
+          - instance: "mysql"
+          - databaseschema: "test-schema"
+          - importtable: "workflowimport"
+          - listResult:
+              nextPageToken: ""
+    - export-query:
+        call: googleapis.bigquery.v2.jobs.query
+        args:
+          projectId: ${projectid}
+          body:
+            query: ${"EXPORT DATA OPTIONS( uri='gs://" + bucket + "/" + prefix + "*.csv', format='CSV', overwrite=true,header=false) AS " + query}
+            useLegacySql: false
+    - importfiles:
+        call: list_file_to_import
+        args:
+          pagetoken: ${listResult.nextPageToken}
+          bucket: ${bucket}
+          prefix: ${prefix}
+          projectid: ${projectid}
+          instance: ${instance}
+          databaseschema: ${databaseschema}
+          importtable: ${importtable}
+        result: listResult
+    - missing-files:
+        switch:
+          - condition:  ${"nextPageToken" in listResult}
+            next: importfiles
+
+
+list_file_to_import:
+  params:
+    - pagetoken
+    - bucket
+    - prefix
+    - projectid
+    - instance
+    - databaseschema
+    - importtable
+  steps:
+    - list-files:
+        call: googleapis.storage.v1.objects.list
+        args:
+          bucket: ${bucket}
+          pageToken: ${pagetoken}
+          prefix: ${prefix}
+        result: listResult
+    - process-files:
+        for:
+          value: file
+          in: ${listResult.items}
+          steps:
+            - wait-import:
+                call: import_file
+                args:
+                  projectid: ${projectid}
+                  instance: ${instance}
+                  databaseschema: ${databaseschema}
+                  importtable: ${importtable}
+                  file: ${"gs://" + bucket + "/" + file.name}
+    - return-step:
+        return: ${listResult}
+
+
+import_file:
+  params:
+    - projectid
+    - instance
+    - databaseschema
+    - importtable
+    - file
+  steps:
+    - callImport:
+        call: http.post
+        args:
+          url: ${"https://sqladmin.googleapis.com/v1/projects/" + projectid + "/instances/" + instance + "/import"}
+          auth:
+            type: OAuth2
+          body:
+            importContext:
+              uri: ${file}
+              database: ${databaseschema}
+              fileType: CSV
+              csvImportOptions:
+                table: ${importtable}
+        result: operation
+    - chekoperation:
+        switch:
+          - condition: ${operation.body.status != "DONE"}
+            next: wait
+        next: completed
+    - completed:
+        return: "done"
+    - wait:
+        call: sys.sleep
+        args:
+          seconds: 1
+        next: getoperation
+    - getoperation:
+        call: http.get
+        args:
+          url: ${operation.body.selfLink}
+          auth:
+            type: OAuth2
+        result: operation
+        next: chekoperation
