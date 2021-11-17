@@ -2,13 +2,13 @@ main:
   steps:
     - assignStep:
         assign:
-          - bucket: "gib-multiregion-us"
-          - projectid: "gdglyon-cloudrun"
-          - prefix: "workflow-import/export"
-          - query: "SELECT id, email FROM `gdglyon-cloudrun.copy_dataset.name_test`"
-          - instance: "mysql"
-          - databaseschema: "test-schema"
-          - importtable: "workflowimport"
+          - bucket: "<YOUR BUCKET>"
+          - projectid: "<YOUR PROJECT ID>"
+          - prefix: "<YOUR FILE PREFIX>"
+          - query: "<YOUR BIGQUERY QUERY>"
+          - instance: "<YOUR CLOUD SQL INSTANCE NAME>"
+          - databaseschema: "<YOUR CLOUD SQL DATABASE NAME>"
+          - importtable: "<YOUR CLOUD SQL TABLE NAME>"
           - listResult:
               nextPageToken: ""
     - export-query:
