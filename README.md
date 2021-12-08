@@ -60,4 +60,4 @@ You can also check your Cloud SQL database to see the import result.
 # License
 
 This library is licensed under Apache 2.0. Full license text is available in
-[LICENSE](https://github.com/guillaumeblaquiere/cloudrun-cloudfunction-compare/tree/master/LICENSE).
+[LICENSE](https://github.com/guillaumeblaquiere/workflow-bq-to-cloudsql/tree/master/LICENSE).
