@@ -78,19 +78,21 @@ import_file:
     - file
   steps:
     - callImport:
-        call: http.post
-        args:
-          url: ${"https://sqladmin.googleapis.com/v1/projects/" + projectid + "/instances/" + instance + "/import"}
-          auth:
-            type: OAuth2
-          body:
-            importContext:
-              uri: ${file}
-              database: ${databaseschema}
-              fileType: CSV
-              csvImportOptions:
-                table: ${importtable}
-        result: operation
+        try:
+          call: http.post
+          args:
+            url: ${"https://sqladmin.googleapis.com/v1/projects/" + projectid + "/instances/" + instance + "/import"}
+            auth:
+              type: OAuth2
+            body:
+              importContext:
+                uri: ${file}
+                database: ${databaseschema}
+                fileType: CSV
+                csvImportOptions:
+                  table: ${importtable}
+          result: operation
+        retry: ${http.default_retry}
     - chekoperation:
         switch:
           - condition: ${operation.body.status != "DONE"}
